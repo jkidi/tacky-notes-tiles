@@ -116,6 +116,14 @@ jobs:
       - name: Merge regions (dedupe border POIs by osmId) and check size
         run: python merge_tiles.py region-tiles/tiles-*/ --out merged-tiles --max-bytes 900000000
 
+      - name: Add static site pages (e.g. the privacy policy) to the deploy
+        # site/ holds hand-written pages served alongside the tiles, at the
+        # site root -- so site/privacy.html becomes <pages-base>/privacy.html,
+        # not <pages-base>/site/privacy.html. Copied in (not merged by
+        # merge_tiles.py, which only knows about *.json.gz tiles) after the
+        # tile merge so a page here can never be mistaken for tile data.
+        run: cp -r site/. merged-tiles/
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

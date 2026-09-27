@@ -160,7 +160,11 @@ region's job.
    Actions**. `.github/workflows/build-tiles.yml`'s `merge-and-deploy` job
    already builds and deploys the Pages artifact (`actions/configure-pages`,
    `actions/upload-pages-artifact`, `actions/deploy-pages`) -- nothing else to
-   configure once Pages itself is turned on for this repo.
+   configure once Pages itself is turned on for this repo. That job also
+   copies `site/` (hand-written pages, currently just `site/privacy.html`,
+   the app's privacy policy) into the merged tile directory before
+   deploying, so those pages are served at the site root alongside the
+   tiles -- e.g. `<pages-base>/privacy.html` -- not under a `/site/` path.
 2. The resulting base URL is
    `https://<owner>.github.io/locationnotes-tiles/` (or your fork/org's
    equivalent -- GitHub shows the exact URL under Settings -> Pages once

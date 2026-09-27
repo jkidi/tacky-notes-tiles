@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Chit: Notes for Places</title>
+<meta name="description" content="Privacy policy for the Chit: Notes for Places mobile app.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1b1b1f;
+    --muted: #55565c;
+    --accent: #6b3fa0;
+    --border: #e3e1e8;
+    --card: #f7f6fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16141a;
+      --fg: #eeecf1;
+      --muted: #b6b3bd;
+      --accent: #c9a3ec;
+      --border: #322f3a;
+      --card: #201d26;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+  header.page {
+    margin-bottom: 2rem;
+  }
+  h1 {
+    font-size: 1.75rem;
+    margin: 0 0 0.35rem;
+  }
+  .updated {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+  h2 {
+    font-size: 1.2rem;
+    margin: 2.25rem 0 0.75rem;
+    padding-top: 0.25rem;
+    border-top: 1px solid var(--border);
+  }
+  h2:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+  p, li {
+    font-size: 1rem;
+  }
+  ul {
+    padding-left: 1.25rem;
+  }
+  .callout {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+  }
+  .callout ul {
+    margin: 0;
+  }
+  a {
+    color: var(--accent);
+  }
+  code {
+    background: var(--card);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+  }
+  .placeholder {
+    font-weight: 600;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="page">
+    <h1>Privacy Policy — Chit: Notes for Places</h1>
+    <p class="updated">Last updated: September 27, 2026</p>
+  </header>
+
+  <p>Chit ("the app") is a notes app made by
+    <span class="placeholder">[OWNER NAME / CONTACT EMAIL]</span>
+    ("we", "us"). This policy explains what data the app handles, where it
+    goes, and why. It applies to the Chit app
+    (package id <code>com.pixeldreamland.locationnotes</code>) on Android
+    and iOS.</p>
+
+  <h2>The short version</h2>
+  <div class="callout">
+    <ul>
+      <li>Your notes, saved places, and alerts are stored <strong>only on
+        your device</strong>. We never see them, and there is no account,
+        sign-in, or cloud sync.</li>
+      <li>The app has <strong>no analytics, no advertising, and no
+        crash-reporting SDKs</strong>. Nothing about how you use the app is
+        sent anywhere.</li>
+      <li>A few features send small, specific pieces of information to
+        outside services <strong>only when you use those features</strong>,
+        described below.</li>
+      <li>Background location is used <strong>only</strong> to detect when
+        you enter or leave a place you've set an alert for, so the app can
+        show you a notification. It is never uploaded anywhere.</li>
+    </ul>
+  </div>
+
+  <h2>What stays on your device</h2>
+  <p>Everything you create in the app — notes, fragments (text, checklists,
+    images, links), saved places, alerts, and settings — is stored in a
+    local database on your device and is never transmitted to us or to any
+    server we control. We do not operate a backend for this app and have no
+    way to see your data.</p>
+  <p><strong>Private notes</strong> can be locked behind your device's own
+    screen lock or biometric unlock (fingerprint/face). This restricts who
+    can <em>open</em> a private note inside the app; it does not encrypt
+    the note's content on disk. Anyone with direct access to the device's
+    file system (for example, a phone backup extracted on a computer) could
+    still potentially read it. Don't treat private notes as a substitute
+    for full-disk or file encryption.</p>
+  <p><strong>Photos</strong> you attach to notes come from your camera or
+    photo library and are stored on your device only; they are never
+    uploaded.</p>
+
+  <h2>Location</h2>
+  <p><strong>Foreground location</strong> is used to sort your notes by
+    distance and to show which ones are "here now." This never leaves your
+    device except as described below.</p>
+  <p><strong>Background ("Always") location</strong> is used
+    <strong>only to power alerts you create</strong> — a notification when
+    you enter or leave a place, a chain (e.g., "any McDonald's"), or a
+    category (e.g., "any supermarket") you've chosen to be notified about.
+    The app monitors a small number of geofences (invisible virtual
+    boundaries) around the locations your alerts need; it does not
+    continuously track or log your location or route, and it does not send
+    your location to us. If you have no alerts turned on, the app doesn't
+    request or use background location at all.</p>
+
+  <h2>Google Maps and Google Places</h2>
+  <p>The app uses the <strong>Google Maps SDK</strong> to display maps, and
+    the <strong>Google Places API</strong> when you search for a place by
+    name or address (autocomplete) or select a search result (place
+    details).</p>
+  <ul>
+    <li>When you view a map, Google's map-tile servers receive requests for
+      the map tiles needed to draw the area you're viewing — standard for
+      any app that shows a Google Map, and handled under Google's own
+      privacy policy.</li>
+    <li>When you type in the place search box, the text you type is sent to
+      Google's Places API to get suggestions; when you pick a result, its
+      place ID is sent to Google to get its address and coordinates. This
+      only happens when you actively search — it is not triggered by simply
+      opening the app.</li>
+    <li>If you save a place found this way, the app periodically (about
+      every 25 days) asks Google to refresh that place's coordinates in the
+      background, so alerts don't rely on data older than Google allows
+      apps to cache. This is limited to places you've saved that an active
+      alert of yours depends on.</li>
+  </ul>
+  <p>See <a href="https://policies.google.com/privacy">Google's Privacy
+    Policy</a> for how Google handles this data.</p>
+
+  <h2>Reverse geocoding (turning coordinates into an address)</h2>
+  <p>When you pin a location on the map, the app asks your phone's built-in
+    geocoding service to turn the coordinates into a readable address to
+    show you. This uses the operating system's own location-lookup service
+    (provided by Google on Android and by Apple on iOS, not by us), governed
+    by their respective privacy policies. If the lookup fails, the app just
+    shows "Pinned location" instead.</p>
+
+  <h2>Brand and category alerts (place data)</h2>
+  <p>If you set an alert for "any branch of a brand" or "any place of a
+    type" (e.g., "any supermarket"), the app needs to know where nearby
+    matching places are. In the published app, this comes from a pre-built,
+    read-only grid of map files ("tiles") we host on GitHub Pages, built in
+    advance from OpenStreetMap data. The app downloads only the tile(s)
+    covering a rough area around you — each tile covers roughly a 20&nbsp;km
+    &times; 20&nbsp;km square — so the host sees only which rough tile files
+    were requested and when, never your exact coordinates. Tile files are
+    cached on your device and reused for about a week before being
+    re-downloaded.</p>
+
+  <h2>Notifications</h2>
+  <p>Alert notifications ("you've arrived near X") and any other
+    notifications the app shows are generated <strong>entirely on your
+    device</strong> using your phone's local notification system. The app
+    doesn't use any push-notification service, and no notification content
+    is sent to us or anyone else.</p>
+
+  <h2>Exporting your data</h2>
+  <p>The app can create a backup file (a <code>.zip</code> containing your
+    notes, places, alerts, and images) when — and only when — you choose to
+    export it. That file is created locally on your device and handed to
+    your phone's normal share sheet, so it goes wherever you choose to send
+    or save it (e.g., a file, an email, cloud storage you pick). We never
+    receive a copy, and nothing is exported automatically or in the
+    background.</p>
+
+  <h2>What we don't do</h2>
+  <ul>
+    <li>We don't collect analytics or usage statistics.</li>
+    <li>We don't show ads or use advertising SDKs.</li>
+    <li>We don't use crash-reporting or telemetry services.</li>
+    <li>We don't have user accounts, and we don't sync your data to any
+      server.</li>
+    <li>We don't sell or share your data with third parties, because we
+      don't have it to begin with — it stays on your device.</li>
+  </ul>
+
+  <h2>Children's privacy</h2>
+  <p>The app is not directed at children and we do not knowingly collect
+    personal information from children. Because the app doesn't collect
+    personal information from anyone in the first place (see above), this
+    is naturally the case for all users.</p>
+
+  <h2>Your choices and control</h2>
+  <ul>
+    <li>You can deny or revoke location and notification permissions at any
+      time in your device's settings; the app degrades gracefully (notes
+      just won't be sorted by distance, and alerts won't fire).</li>
+    <li>Deleting a note, place, or alert in the app removes it immediately
+      and permanently from your device; there is no server copy to also
+      delete.</li>
+    <li>Uninstalling the app removes all of the app's local data, subject
+      to your operating system's normal app-data rules.</li>
+  </ul>
+
+  <h2>Changes to this policy</h2>
+  <p>If this policy changes, we'll update the "Last updated" date above
+    and, for material changes, note it in the app's release notes.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy or the app's data handling:
+    <span class="placeholder">[OWNER NAME / CONTACT EMAIL]</span></p>
+
+  <footer>
+    Chit: Notes for Places &middot; This page is published from the
+    <code>locationnotes-tiles</code> repository's GitHub Pages site.
+  </footer>
+</main>
+</body>
+</html>
