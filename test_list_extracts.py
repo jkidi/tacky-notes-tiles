@@ -139,6 +139,47 @@ class SelectExtractsTest(unittest.TestCase):
             ["north-america/canada", "north-america/us/california", "north-america/us/nevada"],
         )
 
+    def test_extra_extracts_is_omitted_by_default(self):
+        # Callers who don't pass extra_extracts (e.g. every other test above)
+        # get exactly the ISO-code-based selection, unaffected by the real
+        # EXTRA_EXTRACTS constant.
+        paths = le.select_extracts("europe", FIXTURE_PROPS_BY_ID, _size_from_fixture)
+        self.assertNotIn("europe/kosovo", paths)
+
+    def test_extra_extracts_are_appended_for_their_region(self):
+        paths = le.select_extracts(
+            "europe",
+            {"europe": FIXTURE_PROPS_BY_ID["europe"], "andorra": FIXTURE_PROPS_BY_ID["andorra"]},
+            _size_from_fixture,
+            extra_extracts={"europe": ["europe/kosovo", "europe/azores"]},
+        )
+        self.assertEqual(paths, ["europe/andorra", "europe/kosovo", "europe/azores"])
+
+    def test_extra_extracts_for_a_different_region_are_not_appended(self):
+        paths = le.select_extracts(
+            "north-america",
+            {"north-america": FIXTURE_PROPS_BY_ID["north-america"], "canada": FIXTURE_PROPS_BY_ID["canada"]},
+            _size_from_fixture,
+            extra_extracts={"europe": ["europe/kosovo"]},
+        )
+        self.assertEqual(paths, ["north-america/canada"])
+
+    def test_the_real_extra_extracts_constant_covers_the_known_iso_code_gap_territories(self):
+        paths = le.select_extracts(
+            "europe",
+            {"europe": FIXTURE_PROPS_BY_ID["europe"], "andorra": FIXTURE_PROPS_BY_ID["andorra"]},
+            _size_from_fixture,
+            extra_extracts=le.EXTRA_EXTRACTS,
+        )
+        for expected in [
+            "europe/kosovo",
+            "europe/azores",
+            "europe/isle-of-man",
+            "europe/guernsey-jersey",
+            "africa/canary-islands",
+        ]:
+            self.assertIn(expected, paths)
+
 
 class IndexByIdTest(unittest.TestCase):
     def test_parses_a_geojson_style_index(self):

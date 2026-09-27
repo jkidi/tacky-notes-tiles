@@ -39,12 +39,14 @@ was read from, but a deterministic tie-break (rather than "undefined") is
 one less thing to wonder about when debugging.
 
 Exits non-zero (after still writing the merged output) when the merged tile
-set's total size exceeds `--max-bytes` (default 900,000,000 bytes = 900 MB,
-global-constraints.md "Tile hosting": GitHub Pages' recommended limit) --
+set's total size exceeds `--max-bytes` (default 900,000,000 bytes = 900 MB;
+see README.md "Tile hosting" -- GitHub Pages' recommended limit) --
 this is meant to fail the CI job's merge step before it reaches
 `upload-pages-artifact`/`deploy-pages`, not to silently publish an
 oversized site. See README.md "If the size check fails" for what to do then
-(shrink `regions.txt`'s coverage).
+(drop a region from build-tiles.yml's build matrix, not just regions.txt --
+lowering `list_extracts.py`'s size threshold only changes how finely a
+country is split, not the total output).
 """
 
 from __future__ import annotations
@@ -116,8 +118,8 @@ def main(argv: list[str] | None = None) -> int:
     if total_bytes > args.max_bytes:
         print(
             f"ERROR: merged tile set is {total_bytes} bytes, over the {args.max_bytes}-byte limit "
-            "(global-constraints.md \"Tile hosting\"). Shrink regions.txt's coverage before this "
-            "can be deployed -- see README.md \"If the size check fails\".",
+            "(README.md \"Tile hosting\"). Drop a region from build-tiles.yml's build matrix "
+            "before this can be deployed -- see README.md \"If the size check fails\".",
             file=sys.stderr,
         )
         return 1

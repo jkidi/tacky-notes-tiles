@@ -44,9 +44,9 @@ class CategoryForTagsTest(unittest.TestCase):
 
 
 class BrandWikidataIdForTagsTest(unittest.TestCase):
-    """No brand catalog any more (global-constraints.md "The pipeline no
-    longer needs the app's brand catalog") -- any tag value that looks like a
-    Wikidata entity id is kept."""
+    """No brand catalog any more (this pipeline no longer needs the app's
+    brand catalog) -- any tag value that looks like a Wikidata entity id is
+    kept."""
 
     def test_wikidata_id_is_returned(self):
         tags = {"brand:wikidata": "Q38076"}

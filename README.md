@@ -48,6 +48,17 @@ Geofabrik regions `europe`, `north-america`, `central-america`,
 `south-america`, `australia-oceania` (`regions.txt`) -- no Asia, Africa,
 Antarctica, or Russia.
 
+A few small, inhabited territories would otherwise fall through
+`list_extracts.py`'s ISO-code-based country selection entirely -- either
+because Geofabrik lists them with no `iso3166-1:alpha2` code at all (Kosovo,
+the Azores, the Isle of Man, Guernsey/Jersey), or because Geofabrik files
+them under a region this pipeline doesn't otherwise build (the Canary
+Islands, Spanish territory filed under Geofabrik's "africa"). These are
+listed explicitly in `list_extracts.py`'s `EXTRA_EXTRACTS` and appended to
+the `europe` region's job. If Geofabrik's index ever adds an ISO code for
+one of these, `country_candidates` would pick it up on its own and the
+explicit entry becomes redundant (harmless, just remove it if noticed).
+
 ## Running locally
 
 ### Prerequisites
@@ -192,10 +203,16 @@ actually hitting that ceiling.
 
 #### If the size check fails
 
-Shrink `regions.txt`'s coverage (drop a region, or lower
-`list_extracts.py`'s `--size-threshold-bytes` so more countries get replaced
-by finer-grained, more selectively includable subdivisions) rather than
-raising `--max-bytes` past what Pages can reasonably serve.
+Drop a region from **both** `build-tiles.yml`'s matrix
+(`jobs.build-region.strategy.matrix.region`) and `regions.txt`, rather than
+raising `--max-bytes` past what Pages can reasonably serve. The workflow's
+matrix is what CI actually iterates over; `regions.txt` on its own is a
+human-readable list of the same regions (read by this README and by code
+comments, not by the workflow), so removing a region from `regions.txt`
+alone would not stop that region's job from running. Lowering
+`list_extracts.py`'s `--size-threshold-bytes` doesn't help here either -- it
+only changes how finely an already-included country gets split into smaller
+extracts, not how much total data the pipeline processes.
 
 ### R2 fallback
 
@@ -246,6 +263,7 @@ The map data this pipeline downloads, filters, and republishes as tiles is
 **Open Database License (ODbL) 1.0**. Anything built from OSM data --
 including the tiles this pipeline publishes -- must carry OSM's attribution
 ("© OpenStreetMap contributors") and comply with ODbL's share-alike terms.
-The app displays that attribution itself (see the app repo's
-global-constraints.md "Attribution text"); this repo's own README carries it
-here for the tiles it hosts directly.
+The app displays that attribution itself (in its About screen, under the
+brand picker's results, and under the category dropdown in the alert
+editor); this repo's own README carries it here for the tiles it hosts
+directly.

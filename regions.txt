@@ -1,10 +1,12 @@
 # The five Geofabrik top-level regions this pipeline builds tiles for
-# (global-constraints.md "Coverage"). No Asia, Africa, Russia, or Antarctica.
+# (see README.md "Coverage"). No Asia, Africa, Russia, or Antarctica.
 #
 # Each is a matrix entry in .github/workflows/build-tiles.yml: that job runs
 # `python list_extracts.py <region>` to expand it into the actual leaf
 # extracts to download and process (a big country's own children instead of
-# its single whole-country extract -- see list_extracts.py).
+# its single whole-country extract -- see list_extracts.py). This file is a
+# human-readable record of those regions, kept in sync by hand with the
+# workflow's matrix -- the workflow itself reads its matrix, not this file.
 europe
 north-america
 central-america

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Lists the Geofabrik leaf extracts to build tiles from, for one of the
 coverage regions in regions.txt (europe, north-america, central-america,
-south-america, australia-oceania -- global-constraints.md "Coverage").
+south-america, australia-oceania -- see README.md "Coverage").
 
 Usage:
     python list_extracts.py <region> [--index-url URL] [--size-threshold-bytes N]
@@ -49,6 +49,20 @@ bottoms out there already (no country here has a > 1 GB subdivision as of
 this writing) and re-measuring recursively adds a lot of complexity for a
 case that doesn't currently exist. If that ever changes, re-derive/extend
 this rather than assuming a single level is still enough.
+
+Territories the selection rule above misses entirely
+------------------------------------------------------
+
+A handful of real, inhabited territories have no `iso3166-1:alpha2` code in
+Geofabrik's index at all (Kosovo, the Azores, the Isle of Man,
+Guernsey/Jersey), so `country_candidates` never picks them up no matter which
+region they're nested under. The Canary Islands are Spanish territory but
+Geofabrik files them as a child of "africa", not "europe", so even a
+hypothetical ISO-code-based match wouldn't place them under the "europe"
+region job. `EXTRA_EXTRACTS` below lists these explicitly, by their exact
+Geofabrik path, so `main()` can append them to a region's selection
+regardless of the ISO-code rule -- see `README.md` "Coverage" for the
+reasoning kept in sync with this list.
 """
 
 from __future__ import annotations
@@ -64,6 +78,23 @@ DEFAULT_SIZE_THRESHOLD_BYTES = 1_000_000_000
 REQUEST_TIMEOUT_SECONDS = 30
 
 PropsById = dict[str, dict]
+
+# Extra Geofabrik paths to include for a region beyond what the ISO-code-based
+# `country_candidates` rule can ever find on its own (see the module
+# docstring's "Territories the selection rule above misses entirely"). Listed
+# by exact Geofabrik path (not id), since `region_path` needs a feature's
+# `urls.pbf` to derive a path and these features either have no ISO code to
+# match on, or (Canary Islands) sit under a different top-level region than
+# the one whose coverage they belong to.
+EXTRA_EXTRACTS: dict[str, list[str]] = {
+    "europe": [
+        "europe/kosovo",
+        "europe/azores",
+        "europe/isle-of-man",
+        "europe/guernsey-jersey",
+        "africa/canary-islands",
+    ],
+}
 
 
 def index_by_id(index_json: dict) -> PropsById:
@@ -109,11 +140,15 @@ def select_extracts(
     props_by_id: PropsById,
     get_size_bytes: Callable[[dict], int],
     size_threshold_bytes: int = DEFAULT_SIZE_THRESHOLD_BYTES,
+    extra_extracts: dict[str, list[str]] | None = None,
 ) -> list[str]:
     """The list of Geofabrik paths to build tiles from for [region] -- see the
     module docstring's "Selection rule". [get_size_bytes] takes a country's
     properties and returns its `.osm.pbf` extract's size in bytes; injected so
-    tests never make a real network call."""
+    tests never make a real network call. [extra_extracts] (keyed by region,
+    see `EXTRA_EXTRACTS`) is appended verbatim -- omitted (the default) so
+    existing callers/tests that only care about the ISO-code-based rule are
+    unaffected; `main()` passes the real `EXTRA_EXTRACTS`."""
     paths: list[str] = []
 
     for country_id in sorted(country_candidates(region, props_by_id)):
@@ -135,6 +170,8 @@ def select_extracts(
             continue
 
         paths.extend(region_path(props_by_id[child_id]) for child_id in children)
+
+    paths.extend((extra_extracts or {}).get(region, []))
 
     return paths
 
@@ -171,7 +208,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {args.region!r} is not a known Geofabrik region id.", file=sys.stderr)
         return 1
 
-    for path in select_extracts(args.region, props_by_id, http_head_content_length, args.size_threshold_bytes):
+    for path in select_extracts(
+        args.region, props_by_id, http_head_content_length, args.size_threshold_bytes, EXTRA_EXTRACTS
+    ):
         print(path)
 
     return 0
