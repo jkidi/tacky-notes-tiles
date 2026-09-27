@@ -1,0 +1,126 @@
+name: Build and deploy POI tiles
+
+# Weekly rebuild of the pre-built POI tile grid (build_poi_tiles.py) from
+# Geofabrik extracts, published to this repo's GitHub Pages site. See
+# README.md for the full pipeline description, how to run it locally, and
+# how to enable Pages.
+#
+# Shape: one matrix job per region in regions.txt (each expands to that
+# region's leaf extracts with list_extracts.py, downloads and pre-filters
+# them with osmium-tool, then builds that region's own tile set and uploads
+# it as a workflow artifact) -- then one merge job that downloads every
+# region's artifact, merges them (deduplicating a border POI that landed in
+# more than one region -- see merge_tiles.py), size-checks the result, and
+# deploys it to Pages.
+
+on:
+  schedule:
+    # Every Monday at 03:17 UTC. An off-the-hour minute so this doesn't line
+    # up with the stampede of jobs everyone else schedules for :00.
+    - cron: "17 3 * * 1"
+  workflow_dispatch: {}
+
+concurrency:
+  # Only one build (scheduled or manual) at a time.
+  group: build-tiles
+  cancel-in-progress: false
+
+jobs:
+  build-region:
+    strategy:
+      fail-fast: false
+      matrix:
+        region: [europe, north-america, central-america, south-america, australia-oceania]
+    runs-on: ubuntu-latest
+    # Europe (the largest region, since France/Germany/Poland/UK/Italy/Spain
+    # are all split into their own states/voivodeships by list_extracts.py,
+    # but Russia/most-of-Asia/Africa are out of scope entirely) is the long
+    # pole. 240 minutes leaves real headroom over the ~2-3h a from-scratch
+    # measurement suggested, well inside GitHub-hosted runners' 360-minute
+    # hard cap.
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y osmium-tool
+          pip install -r requirements.txt
+
+      - name: List this region's extracts
+        run: python list_extracts.py "${{ matrix.region }}" > extracts.txt
+
+      - name: Download, pre-filter, and build this region's tiles
+        run: |
+          set -euo pipefail
+          mkdir -p raw filtered
+          while read -r extract; do
+            [ -z "$extract" ] && continue
+            echo "=== $extract ==="
+            slug="${extract//\//-}"
+
+            echo "Downloading ..."
+            curl -sSL --fail -o "raw/$slug.osm.pbf" \
+              "https://download.geofabrik.de/${extract}-latest.osm.pbf"
+
+            echo "Pre-filtering (nwr/shop nwr/amenity nwr/leisure=fitness_centre) ..."
+            osmium tags-filter --overwrite -o "filtered/$slug.osm.pbf" \
+              "raw/$slug.osm.pbf" nwr/shop nwr/amenity nwr/leisure=fitness_centre
+
+            # Freed immediately -- the raw extract is much larger than its
+            # filtered output, and several extracts' raw files coexisting
+            # would otherwise risk the runner's disk.
+            rm "raw/$slug.osm.pbf"
+          done < extracts.txt
+
+          python build_poi_tiles.py filtered/*.osm.pbf \
+            --out "tiles-${{ matrix.region }}" \
+            --index "sparse_file_array,$RUNNER_TEMP/poi-tiles-node-index"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tiles-${{ matrix.region }}
+          path: tiles-${{ matrix.region }}/
+          retention-days: 14
+
+  merge-and-deploy:
+    needs: build-region
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: tiles-*
+          path: region-tiles
+
+      - name: Merge regions (dedupe border POIs by osmId) and check size
+        run: python merge_tiles.py region-tiles/tiles-*/ --out merged-tiles --max-bytes 900000000
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: merged-tiles
+
+      - uses: actions/deploy-pages@v4
+        id: deployment

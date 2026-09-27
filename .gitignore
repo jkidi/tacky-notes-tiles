@@ -1,0 +1,11 @@
+# Downloaded/filtered OSM extracts and generated tiles are never committed --
+# this repo builds and (via CI) publishes them, it doesn't store them.
+*.osm.pbf
+/extracts/
+/filtered/
+/tiles/
+/tiles_*/
+
+__pycache__/
+*.pyc
+.pytest_cache/
