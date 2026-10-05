@@ -1,6 +1,6 @@
-# locationnotes-tiles
+# tacky-notes-tiles
 
-Builds the pre-built POI tile grid the [Tacky](https://github.com/jkidi/Location-Notes) (Notes for Places) app
+Builds the pre-built POI tile grid the [Tacky Notes](https://github.com/jkidi/Location-Notes) app
 serves brand/category alerts from, and publishes it as a static site over
 GitHub Pages. This repo used to live inside the app repo as
 `tool/poi_tiles/`; it moved out on its own so the tile-build pipeline (which
@@ -172,14 +172,21 @@ region's job.
    already builds and deploys the Pages artifact (`actions/configure-pages`,
    `actions/upload-pages-artifact`, `actions/deploy-pages`) -- nothing else to
    configure once Pages itself is turned on for this repo.
-2. The resulting base URL is
-   `https://<owner>.github.io/locationnotes-tiles/` (or your fork/org's
-   equivalent -- GitHub shows the exact URL under Settings -> Pages once
-   it's enabled). Point the app at it:
+2. The tiles are served at the custom domain `https://tiles.tackynotes.com`:
+   a DNS CNAME record `tiles.tackynotes.com` -> `jkidi.github.io`, then
+   **Settings -> Pages -> Custom domain** `tiles.tackynotes.com` and
+   **Enforce HTTPS**. No `CNAME` file is needed in the repo: with the
+   GitHub Actions source, the domain lives in the Pages settings. Without
+   the domain, the site is at `https://jkidi.github.io/tacky-notes-tiles/`.
+   Point the app at it:
    ```
-   flutter build apk --debug --dart-define=POI_TILE_BASE_URL=https://<owner>.github.io/locationnotes-tiles
+   flutter build apk --debug --dart-define=POI_TILE_BASE_URL=https://tiles.tackynotes.com
    ```
-   See the app repo's `lib/poi/poi_source_factory.dart`.
+   See the app repo's `lib/poi/poi_source_factory.dart`. That URL is built
+   into every release, so keep it stable: the custom domain is what lets
+   this repo be renamed, or the tiles move to another host (see "R2
+   fallback" below), without breaking installed apps. GitHub doesn't
+   redirect a renamed repo's `github.io` address.
 3. Every deploy **replaces the whole site** -- Pages has no notion of
    "only the changed tiles", so each weekly run re-uploads every tile file
    even if most of them are unchanged. That's fine at this pipeline's size
@@ -233,8 +240,9 @@ step such as:
     endpoint: https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com
 ```
 
-Then point `POI_TILE_BASE_URL` at the bucket's public URL/custom domain
-instead of the Pages URL. Nothing in `build_poi_tiles.py`/`merge_tiles.py`
+Then point `tiles.tackynotes.com` at the bucket (R2 custom domain) instead
+of GitHub Pages, so released apps keep working with the same
+`POI_TILE_BASE_URL`. Nothing in `build_poi_tiles.py`/`merge_tiles.py`
 needs to change either way -- both just produce a directory of
 `<latIndex>_<lngIndex>.json.gz` files; only where that directory ends up
 served from differs.
