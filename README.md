@@ -1,6 +1,6 @@
 # locationnotes-tiles
 
-Builds the pre-built POI tile grid the [Location Notes](https://github.com/) app
+Builds the pre-built POI tile grid the [Tacky](https://github.com/jkidi/locationnotes) (Notes for Places) app
 serves brand/category alerts from, and publishes it as a static site over
 GitHub Pages. This repo used to live inside the app repo as
 `tool/poi_tiles/`; it moved out on its own so the tile-build pipeline (which
@@ -171,11 +171,7 @@ region's job.
    Actions**. `.github/workflows/build-tiles.yml`'s `merge-and-deploy` job
    already builds and deploys the Pages artifact (`actions/configure-pages`,
    `actions/upload-pages-artifact`, `actions/deploy-pages`) -- nothing else to
-   configure once Pages itself is turned on for this repo. That job also
-   copies `site/` (hand-written pages, currently just `site/privacy.html`,
-   the app's privacy policy) into the merged tile directory before
-   deploying, so those pages are served at the site root alongside the
-   tiles -- e.g. `<pages-base>/privacy.html` -- not under a `/site/` path.
+   configure once Pages itself is turned on for this repo.
 2. The resulting base URL is
    `https://<owner>.github.io/locationnotes-tiles/` (or your fork/org's
    equivalent -- GitHub shows the exact URL under Settings -> Pages once
