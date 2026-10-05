@@ -1,6 +1,6 @@
 # locationnotes-tiles
 
-Builds the pre-built POI tile grid the [Tacky](https://github.com/jkidi/locationnotes) (Notes for Places) app
+Builds the pre-built POI tile grid the [Tacky](https://github.com/jkidi/Location-Notes) (Notes for Places) app
 serves brand/category alerts from, and publishes it as a static site over
 GitHub Pages. This repo used to live inside the app repo as
 `tool/poi_tiles/`; it moved out on its own so the tile-build pipeline (which
