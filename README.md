@@ -37,7 +37,8 @@ free straight off this repo's Pages site.
   legitimately appear in both, and this is where that gets collapsed back
   down to one copy.
 - **`.github/workflows/build-tiles.yml`** -- the pipeline above, run weekly
-  (and on manual dispatch): one matrix job per region (download -> pre-filter
+  (and on manual dispatch, or a push that changes the pipeline's code or
+  this workflow): one matrix job per region (download -> pre-filter
   with `osmium tags-filter` -> `build_poi_tiles.py` -> upload as an artifact),
   then one job that downloads every region's artifact, merges them, checks
   the total size, and deploys to GitHub Pages.

@@ -18,6 +18,16 @@ on:
     # Every Monday at 03:17 UTC. An off-the-hour minute so this doesn't line
     # up with the stampede of jobs everyone else schedules for :00.
     - cron: "17 3 * * 1"
+  # A change to the pipeline itself rebuilds right away instead of waiting
+  # for Monday. Docs and tests alone don't.
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/build-tiles.yml"
+      - "build_poi_tiles.py"
+      - "list_extracts.py"
+      - "merge_tiles.py"
+      - "requirements.txt"
   workflow_dispatch: {}
 
 concurrency:
