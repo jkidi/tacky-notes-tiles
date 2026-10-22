@@ -1,13 +1,18 @@
 """Unit tests for list_extracts.py. Uses a small, hand-built fixture standing
-in for Geofabrik's real index-v1-nogeom.json -- never a real network call.
+in for Geofabrik's real index-v1-nogeom.json -- never a real network call
+(the retry tests talk to a local server only).
 Run with:
 
     python -m unittest test_list_extracts.py
 """
 
 import sys
+import threading
+import time
 import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -192,6 +197,73 @@ class IndexByIdTest(unittest.TestCase):
         result = le.index_by_id(index_json)
         self.assertEqual(list(result.keys()), ["andorra"])
         self.assertEqual(result["andorra"]["id"], "andorra")
+
+
+class RetryTest(unittest.TestCase):
+    """Geofabrik stalling or failing for a moment doesn't fail the build."""
+
+    def serve(self, failures, stalls=0):
+        """A local server answering HEAD and GET with 503 [failures] times, then
+        200; the first [stalls] requests first hang for a second."""
+        calls = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def answer(self, body):
+                calls.append(self.command)
+                if len(calls) <= stalls:
+                    time.sleep(1)
+                if len(calls) <= failures:
+                    self.send_response(503)
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.send_header("Content-Length", "1234" if not body else str(len(body)))
+                self.end_headers()
+                if body:
+                    self.wfile.write(body)
+
+            def do_HEAD(self):
+                self.answer(None)
+
+            def do_GET(self):
+                self.answer(b'{"features": []}')
+
+            def log_message(self, *args):
+                pass
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        # No waiting between retries in a test.
+        session = le.http_session(le.RETRY.new(backoff_factor=0))
+        patcher = mock.patch.object(le, "SESSION", session)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return f"http://127.0.0.1:{server.server_address[1]}/x", calls
+
+    def test_head_retries_until_geofabrik_answers(self):
+        url, calls = self.serve(failures=2)
+        self.assertEqual(le.http_head_content_length({"urls": {"pbf": url}}), 1234)
+        self.assertEqual(calls, ["HEAD", "HEAD", "HEAD"])
+
+    def test_index_download_retries_until_geofabrik_answers(self):
+        url, calls = self.serve(failures=2)
+        self.assertEqual(le.fetch_index(url), {"features": []})
+        self.assertEqual(len(calls), 3)
+
+    def test_gives_up_after_five_retries(self):
+        url, calls = self.serve(failures=100)
+        with self.assertRaises(le.requests.HTTPError):
+            le.http_head_content_length({"urls": {"pbf": url}})
+        self.assertEqual(len(calls), 6)
+
+    def test_retries_a_request_that_stalls_past_the_timeout(self):
+        url, calls = self.serve(failures=0, stalls=1)
+        with mock.patch.object(le, "REQUEST_TIMEOUT_SECONDS", 0.3):
+            self.assertEqual(le.http_head_content_length({"urls": {"pbf": url}}), 1234)
+        self.assertEqual(calls, ["HEAD", "HEAD"])
 
 
 if __name__ == "__main__":
