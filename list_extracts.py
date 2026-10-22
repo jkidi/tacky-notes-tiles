@@ -72,10 +72,35 @@ import sys
 from typing import Callable
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 DEFAULT_INDEX_URL = "https://download.geofabrik.de/index-v1-nogeom.json"
 DEFAULT_SIZE_THRESHOLD_BYTES = 1_000_000_000
 REQUEST_TIMEOUT_SECONDS = 30
+
+# Geofabrik sometimes stalls for a minute or two: on 2026-10-19 every region's
+# first request timed out and the whole build failed. Retry like the
+# workflow's own downloads (`curl --retry 5`), waiting longer each time
+# (10, 20, 40, 80 s), on timeouts, dropped connections and 429/5xx answers.
+RETRY = Retry(
+    total=5,
+    backoff_factor=5,
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods=frozenset({"GET", "HEAD"}),
+    raise_on_status=False,
+)
+
+
+def http_session(retry: Retry = RETRY) -> requests.Session:
+    session = requests.Session()
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
+SESSION = http_session()
 
 PropsById = dict[str, dict]
 
@@ -177,7 +202,7 @@ def select_extracts(
 
 
 def fetch_index(index_url: str) -> dict:
-    response = requests.get(index_url, timeout=REQUEST_TIMEOUT_SECONDS)
+    response = SESSION.get(index_url, timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()
     return response.json()
 
@@ -186,7 +211,7 @@ def http_head_content_length(props: dict) -> int:
     """A real `get_size_bytes` for `select_extracts`: HTTP HEAD's
     `Content-Length` for a country's `urls.pbf` (no body downloaded, just to
     learn its size)."""
-    response = requests.head(props["urls"]["pbf"], timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=True)
+    response = SESSION.head(props["urls"]["pbf"], timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=True)
     response.raise_for_status()
     return int(response.headers["Content-Length"])
 
