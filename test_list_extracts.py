@@ -131,6 +131,26 @@ class SelectExtractsTest(unittest.TestCase):
         # No children listed for andorra -> kept whole despite being "big".
         self.assertEqual(paths, ["europe/andorra"])
 
+    def test_a_country_whose_size_lookup_fails_is_split_rather_than_failing_the_region(self):
+        def size_or_timeout(props):
+            if props["id"] == "poland":
+                raise le.requests.ConnectionError("Read timed out")
+            return _size_from_fixture(props)
+
+        subset = {k: FIXTURE_PROPS_BY_ID[k] for k in ["europe", "poland", "mazowieckie", "malopolskie", "andorra"]}
+        with mock.patch("sys.stderr"):
+            paths = le.select_extracts("europe", subset, size_or_timeout, size_threshold_bytes=10_000_000_000)
+        self.assertEqual(sorted(paths), ["europe/andorra", "europe/poland/malopolskie", "europe/poland/mazowieckie"])
+
+    def test_a_country_whose_size_lookup_fails_and_has_no_children_is_kept_whole(self):
+        def timeout(props):
+            raise le.requests.ConnectionError("Read timed out")
+
+        subset = {"europe": FIXTURE_PROPS_BY_ID["europe"], "andorra": FIXTURE_PROPS_BY_ID["andorra"]}
+        with mock.patch("sys.stderr"):
+            paths = le.select_extracts("europe", subset, timeout)
+        self.assertEqual(paths, ["europe/andorra"])
+
     def test_full_fixture_end_to_end(self):
         europe_paths = le.select_extracts("europe", FIXTURE_PROPS_BY_ID, _size_from_fixture)
         self.assertEqual(

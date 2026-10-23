@@ -41,7 +41,10 @@ Geofabrik nesting convention that country uses: every entry whose "parent" is
 this country's id, unioned with every entry whose own id starts with
 "<country id>/" (see `children_of`). A country over the threshold with no
 children found for it either way is kept whole, with a warning on stderr --
-there is nothing finer-grained to substitute.
+there is nothing finer-grained to substitute. A country whose size can't be
+learned (Geofabrik still not answering after the retries) is treated as over
+the threshold: its children cover the same ground, so one slow lookup doesn't
+fail the whole region.
 
 This rule is deliberately just one level deep (country -> its direct
 children only, never grandchildren): every region this pipeline covers
@@ -178,17 +181,24 @@ def select_extracts(
 
     for country_id in sorted(country_candidates(region, props_by_id)):
         props = props_by_id[country_id]
-        size_bytes = get_size_bytes(props)
+        try:
+            size_bytes = get_size_bytes(props)
+        except requests.RequestException as error:
+            # Geofabrik didn't answer even after retries. Splitting a country
+            # covers the same ground, so assume it's big rather than fail the
+            # whole region over one size lookup.
+            print(f"WARNING: couldn't get {country_id}'s size ({error}) -- treating it as big.", file=sys.stderr)
+            size_bytes = None
 
-        if size_bytes <= size_threshold_bytes:
+        if size_bytes is not None and size_bytes <= size_threshold_bytes:
             paths.append(region_path(props))
             continue
 
         children = children_of(country_id, props_by_id)
         if not children:
             print(
-                f"WARNING: {country_id} is {size_bytes} bytes (over the {size_threshold_bytes}-byte "
-                "threshold) but has no listed subdivisions -- keeping it whole.",
+                f"WARNING: {country_id} is {'of unknown size' if size_bytes is None else f'{size_bytes} bytes'} "
+                f"(over the {size_threshold_bytes}-byte threshold) but has no listed subdivisions -- keeping it whole.",
                 file=sys.stderr,
             )
             paths.append(region_path(props))
