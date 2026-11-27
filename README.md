@@ -43,11 +43,12 @@ free straight off this repo's Pages site.
   then one job that downloads every region's artifact, merges them, checks
   the total size, and deploys to GitHub Pages. Each region job first checks
   that its runner can reach Geofabrik at all, and fails fast if not.
-- **`.github/workflows/rerun-failed.yml`** -- when a build on `master` fails,
-  reruns its failed jobs (and the deploy after them) up to two more times,
-  since a rerun usually lands on a runner that can reach Geofabrik. A build
-  that was only cancelled, by hand or by jobs hitting their time limit,
-  isn't rerun.
+- **`.github/workflows/rerun-failed.yml`** -- when a build on `master` fails
+  because a region job couldn't reach Geofabrik, reruns its failed jobs (and
+  the deploy after them) up to two more times, since a rerun usually lands
+  on a runner that can. It doesn't rerun a failure later in the build
+  (likely a real bug), a build that was only cancelled (by hand, or by jobs
+  hitting their time limit), or a build that a newer one has replaced.
 
 ## Coverage
 

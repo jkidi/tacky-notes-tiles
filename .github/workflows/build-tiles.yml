@@ -55,12 +55,14 @@ jobs:
       # every one of those so far couldn't connect to Geofabrik at all
       # ("Network is unreachable" on every try, while apt and pip worked),
       # where every Azure-hosted runner could. Waiting doesn't help, so fail
-      # within a minute instead of retrying for 11, and print enough to tell
-      # why. rerun-failed.yml then reruns the job, usually on another runner.
+      # within about two minutes at worst instead of retrying for 11, and
+      # print enough to tell why. An HTTP error (say a 403 for the runner's
+      # address range) counts as unreachable too. rerun-failed.yml then
+      # reruns the job, usually on another runner.
       - name: Check that Geofabrik is reachable from this runner
         run: |
           url=https://download.geofabrik.de/index-v1-nogeom.json
-          if curl -sS -o /dev/null -I --connect-timeout 10 --max-time 30 \
+          if curl -sS --fail -o /dev/null -I --connect-timeout 10 --max-time 30 \
               --retry 3 --retry-delay 5 --retry-all-errors "$url"; then
             exit 0
           fi

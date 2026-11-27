@@ -1,16 +1,23 @@
 name: Rerun failed tile builds
 
-# When "Build and deploy POI tiles" fails, rerun its failed jobs (which also
-# reruns merge-and-deploy after them), up to two more times. Most failures
-# so far were one region job landing on a runner that couldn't reach
-# Geofabrik at all (see the reachability check in build-tiles.yml); a rerun
-# gets a new runner, and on 2026-11-27 rerunning by hand fixed exactly that.
+# When "Build and deploy POI tiles" fails because a region job couldn't reach
+# Geofabrik, rerun its failed jobs (which also reruns merge-and-deploy after
+# them), up to two more times. Since 2026-11-16 that's been one region job
+# landing on a runner that couldn't connect to Geofabrik at all (see the
+# reachability check in build-tiles.yml); a rerun gets a new runner, and on
+# 2026-11-27 rerunning by hand fixed exactly that.
 #
-# Only a run that failed. A run whose jobs were only cancelled (by hand, or
-# by hitting their timeout) ends as "cancelled" and isn't retried, since
-# repeating up to 350 minutes of slow downloads is unlikely to go
-# differently. If a run has both, the run is "failure", and the rerun
-# repeats the timed-out jobs too; the attempt limit bounds that.
+# Not rerun:
+# - A failure anywhere past the network steps (building tiles, merging, the
+#   size check): that's most likely a real bug and would just fail again,
+#   hours later.
+# - A run whose jobs were only cancelled, by hand or by hitting their
+#   timeout: it ends as "cancelled", not "failure" (as on 2026-11-02 and
+#   11-09). If a run has both a network failure and a timed-out job, the
+#   rerun repeats the timed-out job too; the attempt limit bounds that.
+# - A run that has a newer build: a rerun replays the old commit and could
+#   deploy over the newer build's tiles, and it would take the one pending
+#   slot in build-tiles.yml's concurrency group, cancelling a queued build.
 
 on:
   workflow_run:
@@ -27,11 +34,38 @@ jobs:
     permissions:
       actions: write
     steps:
-      - name: Rerun the failed jobs
+      - name: Rerun the failed jobs if they failed reaching Geofabrik
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
         run: |
-          echo "Run $RUN_ID failed on attempt $ATTEMPT; rerunning its failed jobs."
+          set -euo pipefail
+          api="repos/$GITHUB_REPOSITORY/actions"
+
+          # Steps where a failure means "this runner couldn't reach
+          # Geofabrik", not a bug in the build.
+          retryable='["Check that Geofabrik is reachable from this runner", "List this region'"'"'s extracts"]'
+
+          not_retryable=$(gh api "$api/runs/$RUN_ID/attempts/$ATTEMPT/jobs?per_page=100" --jq "
+            [.jobs[] | select(.conclusion == \"failure\")
+              | {job: .name, step: ([.steps[] | select(.conclusion == \"failure\") | .name][0] // \"(none)\")}
+              | select(.step as \$s | $retryable | index(\$s) | not)
+              | \"\(.job): \(.step)\"] | .[]")
+          if [ -n "$not_retryable" ]; then
+            echo "Not rerunning: these failures aren't about reaching Geofabrik:"
+            echo "$not_retryable"
+            exit 0
+          fi
+
+          newer=$(gh api "$api/workflows/$WORKFLOW_ID/runs?per_page=20" --jq "
+            [.workflow_runs[] | select(.id != $RUN_ID and (.id > $RUN_ID or .status != \"completed\"))]
+              | length")
+          if [ "$newer" != 0 ]; then
+            echo "Not rerunning: there's a newer or still-running build."
+            exit 0
+          fi
+
+          echo "Run $RUN_ID failed reaching Geofabrik on attempt $ATTEMPT; rerunning its failed jobs."
           gh run rerun "$RUN_ID" --failed --repo "$GITHUB_REPOSITORY"
