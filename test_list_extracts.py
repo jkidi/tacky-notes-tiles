@@ -276,17 +276,23 @@ class RetryTest(unittest.TestCase):
     def test_index_download_outlasts_an_outage_the_size_lookups_would_not(self):
         # On 2026-11-16 and 11-23 the index fetch kept failing ("Network is
         # unreachable") for longer than the size lookups' ~2.5 min of retries.
-        failures = le.RETRY.total + 2
-        url, calls = self.serve(failures=failures)
+        self.assertGreater(le.INDEX_RETRY.total, le.RETRY.total)
+        url, calls = self.serve(failures=le.INDEX_RETRY.total)
         self.assertEqual(le.fetch_index(url), {"features": []})
-        self.assertEqual(len(calls), failures + 1)
+        self.assertEqual(len(calls), le.INDEX_RETRY.total + 1)
 
-    def test_index_download_keeps_retrying_for_about_ten_minutes(self):
+    def test_index_download_gives_up_eventually(self):
+        url, calls = self.serve(failures=100)
+        with self.assertRaises(le.requests.HTTPError):
+            le.fetch_index(url)
+        self.assertEqual(len(calls), le.INDEX_RETRY.total + 1)
+
+    def test_index_download_waits_about_eleven_minutes_between_tries(self):
         retry, waits = le.INDEX_RETRY, []
         for _ in range(retry.total):
             retry = retry.increment(method="GET", url="/", error=ConnectionError())
             waits.append(retry.get_backoff_time())
-        self.assertGreaterEqual(sum(waits), 10 * 60)
+        self.assertEqual(waits, [0, 10, 20, 40, 80, 160, 180, 180])
 
     def test_gives_up_after_five_retries(self):
         url, calls = self.serve(failures=100)

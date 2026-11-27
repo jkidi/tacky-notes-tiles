@@ -108,9 +108,11 @@ SESSION = http_session()
 # The index fetch is the one request the build can't do without, and it's
 # made once, so it can afford to wait out a longer outage: on 2026-11-16 and
 # 11-23 it kept failing ("Network is unreachable") for longer than RETRY's
-# ~2.5 minutes. This keeps trying for ~11 minutes (0, 10, 20, 40, 80, 160,
-# then 180 s twice). The per-country size lookups keep the shorter RETRY,
-# since a failed one only costs a split (see select_extracts).
+# ~2.5 minutes. This waits ~11 minutes in all between tries (0, 10, 20, 40,
+# 80, 160, then 180 s twice), plus up to REQUEST_TIMEOUT_SECONDS per try if
+# Geofabrik stalls instead of refusing (~16 minutes at worst). The
+# per-country size lookups keep the shorter RETRY, since a failed one only
+# costs a split (see select_extracts). backoff_max needs urllib3 2.
 INDEX_RETRY = RETRY.new(total=8, backoff_max=180)
 INDEX_SESSION = http_session(INDEX_RETRY)
 

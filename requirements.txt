@@ -1,2 +1,4 @@
 osmium>=4.3,<5
 requests>=2,<3
+# list_extracts.py passes Retry(backoff_max=...), new in urllib3 2.
+urllib3>=2,<3
