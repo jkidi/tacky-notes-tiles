@@ -257,10 +257,10 @@ class RetryTest(unittest.TestCase):
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         # No waiting between retries in a test.
-        session = le.http_session(le.RETRY.new(backoff_factor=0))
-        patcher = mock.patch.object(le, "SESSION", session)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        for name, retry in (("SESSION", le.RETRY), ("INDEX_SESSION", le.INDEX_RETRY)):
+            patcher = mock.patch.object(le, name, le.http_session(retry.new(backoff_factor=0)))
+            patcher.start()
+            self.addCleanup(patcher.stop)
         return f"http://127.0.0.1:{server.server_address[1]}/x", calls
 
     def test_head_retries_until_geofabrik_answers(self):
@@ -272,6 +272,21 @@ class RetryTest(unittest.TestCase):
         url, calls = self.serve(failures=2)
         self.assertEqual(le.fetch_index(url), {"features": []})
         self.assertEqual(len(calls), 3)
+
+    def test_index_download_outlasts_an_outage_the_size_lookups_would_not(self):
+        # On 2026-11-16 and 11-23 the index fetch kept failing ("Network is
+        # unreachable") for longer than the size lookups' ~2.5 min of retries.
+        failures = le.RETRY.total + 2
+        url, calls = self.serve(failures=failures)
+        self.assertEqual(le.fetch_index(url), {"features": []})
+        self.assertEqual(len(calls), failures + 1)
+
+    def test_index_download_keeps_retrying_for_about_ten_minutes(self):
+        retry, waits = le.INDEX_RETRY, []
+        for _ in range(retry.total):
+            retry = retry.increment(method="GET", url="/", error=ConnectionError())
+            waits.append(retry.get_backoff_time())
+        self.assertGreaterEqual(sum(waits), 10 * 60)
 
     def test_gives_up_after_five_retries(self):
         url, calls = self.serve(failures=100)
