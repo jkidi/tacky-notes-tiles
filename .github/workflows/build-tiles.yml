@@ -45,10 +45,11 @@ jobs:
     # Europe (the largest region, since France/Germany/Poland/UK/Italy/Spain
     # are all split into their own states/voivodeships by list_extracts.py,
     # but Russia/most-of-Asia/Africa are out of scope entirely) is the long
-    # pole. 240 minutes leaves real headroom over the ~2-3h a from-scratch
-    # measurement suggested, well inside GitHub-hosted runners' 360-minute
-    # hard cap.
-    timeout-minutes: 240
+    # pole. It took ~3h on 2026-10-26, but through November Geofabrik's
+    # downloads slowed down and Europe and North America kept hitting the
+    # old 240-minute limit, so no tiles were deployed. 350 minutes is as
+    # close as it's safe to go to GitHub-hosted runners' 360-minute hard cap.
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
