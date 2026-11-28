@@ -25,6 +25,7 @@ on:
     paths:
       - ".github/workflows/build-tiles.yml"
       - "build_poi_tiles.py"
+      - "check_geofabrik.sh"
       - "list_extracts.py"
       - "merge_tiles.py"
       - "requirements.txt"
@@ -51,32 +52,21 @@ jobs:
     # close as it's safe to go to GitHub-hosted runners' 360-minute hard cap.
     timeout-minutes: 350
     steps:
-      # Since 2026-11-16 some jobs land on GitHub's AWS-hosted runners, and
-      # every one of those so far couldn't connect to Geofabrik at all
-      # ("Network is unreachable" on every try, while apt and pip worked),
-      # where every Azure-hosted runner could. Waiting doesn't help, so fail
-      # within about two minutes at worst instead of retrying for 11, and
-      # print enough to tell why. An HTTP error (say a 403 for the runner's
-      # address range) counts as unreachable too. rerun-failed.yml then
-      # reruns the job, usually on another runner.
-      - name: Check that Geofabrik is reachable from this runner
-        run: |
-          url=https://download.geofabrik.de/index-v1-nogeom.json
-          if curl -sS --fail -o /dev/null -I --connect-timeout 10 --max-time 30 \
-              --retry 3 --retry-delay 5 --retry-all-errors "$url"; then
-            exit 0
-          fi
-          echo "::error::This runner can't reach download.geofabrik.de; see the diagnostics below."
-          set -x
-          getent ahosts download.geofabrik.de || true
-          curl -4 -v -o /dev/null -I --connect-timeout 10 --max-time 30 "$url" || true
-          curl -6 -v -o /dev/null -I --connect-timeout 10 --max-time 30 "$url" || true
-          ip -4 route || true
-          ip -6 route || true
-          ip addr || true
-          exit 1
-
       - uses: actions/checkout@v4
+
+      # Since 2026-11-16 some jobs land on GitHub's AWS-hosted runners, and
+      # every one of those so far had all of Geofabrik's IPv4 addresses
+      # refuse the connection, where every Azure-hosted runner connected
+      # fine. Waiting doesn't help, so the check gives up within about two
+      # minutes at worst instead of retrying for 11. Then check_geofabrik.sh
+      # spends a minute or so on diagnostics to tell who is refusing (see
+      # that script); about 12 if every probe hangs, which the step's
+      # timeout caps. rerun-failed.yml then reruns the job, usually on
+      # another runner (it matches this step's name, so keep the two in
+      # sync).
+      - name: Check that Geofabrik is reachable from this runner
+        timeout-minutes: 15
+        run: bash check_geofabrik.sh
 
       - uses: actions/setup-python@v5
         with:
