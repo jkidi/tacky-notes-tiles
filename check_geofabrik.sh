@@ -74,8 +74,8 @@ section "Every address of $host, IPv4 then IPv6"
 for ip in $(getent ahostsv4 "$host" | awk '{print $1}' | sort -u); do
   probe "$ip" "$url" --resolve "$host:443:$ip"
 done
-curl -4 -v -o /dev/null -I --connect-timeout 10 --max-time 30 "$url" 2>&1 | grep -E '^\* (Trying|connect|Connected|Immediate|Failed)' || true
-curl -6 -v -o /dev/null -I --connect-timeout 10 --max-time 30 "$url" 2>&1 | grep -E '^\* (Trying|connect|Connected|Immediate|Failed)' || true
+curl -4 -v -o /dev/null -I --connect-timeout 10 --max-time 30 "$url" 2>&1 | grep -E '^\*[[:space:]]+(Trying|connect|Connected|Immediate|Failed)' || true
+curl -6 -v -o /dev/null -I --connect-timeout 10 --max-time 30 "$url" 2>&1 | grep -E '^\*[[:space:]]+(Trying|connect|Connected|Immediate|Failed)' || true
 
 first_ip=$(getent ahostsv4 "$host" | awk 'NR==1{print $1}')
 
@@ -85,11 +85,19 @@ first_ip=$(getent ahostsv4 "$host" | awk 'NR==1{print $1}')
 # from traceroute below.
 section "The refusal itself (tcpdump, RST packet TTL)"
 if [ -n "$first_ip" ] && command -v tcpdump >/dev/null && sudo -n true 2>/dev/null; then
-  sudo timeout 8 tcpdump -n -v -i any -c 4 "host $first_ip and tcp port 443" 2>&1 &
+  dump_log=$(mktemp)
+  sudo timeout 15 tcpdump -n -v -l -i any -c 4 "host $first_ip and tcp port 443" >"$dump_log" 2>&1 &
   dump_pid=$!
-  sleep 1
+  # Only connect once tcpdump is actually capturing (up to 5 s), or the
+  # SYN and the refusal can go by before it starts.
+  for _ in $(seq 50); do
+    grep -q "listening on" "$dump_log" && break
+    sleep 0.1
+  done
   curl -sS -o /dev/null -I --connect-timeout 5 --max-time 5 --resolve "$host:443:$first_ip" "$url" 2>&1 || true
   wait "$dump_pid" 2>/dev/null || true
+  cat "$dump_log"
+  rm -f "$dump_log"
 else
   echo "(skipped: needs tcpdump and passwordless sudo)"
 fi
@@ -97,8 +105,9 @@ fi
 section "Route to $first_ip on TCP port 443 (traceroute -T)"
 if [ -n "$first_ip" ] && sudo -n true 2>/dev/null; then
   if ! command -v traceroute >/dev/null; then
-    sudo apt-get install -y -qq traceroute >/dev/null 2>&1 ||
-      { sudo apt-get update -qq >/dev/null 2>&1 && sudo apt-get install -y -qq traceroute >/dev/null 2>&1; } || true
+    sudo timeout 60 apt-get install -y -qq traceroute >/dev/null 2>&1 ||
+      { sudo timeout 90 apt-get update -qq >/dev/null 2>&1 &&
+        sudo timeout 60 apt-get install -y -qq traceroute >/dev/null 2>&1; } || true
   fi
   if command -v traceroute >/dev/null; then
     sudo timeout 60 traceroute -n -T -p 443 -q 1 -w 2 -m 25 "$first_ip" 2>&1 || true

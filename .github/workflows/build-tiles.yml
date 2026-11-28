@@ -57,12 +57,15 @@ jobs:
       # Since 2026-11-16 some jobs land on GitHub's AWS-hosted runners, and
       # every one of those so far had all of Geofabrik's IPv4 addresses
       # refuse the connection, where every Azure-hosted runner connected
-      # fine. Waiting doesn't help, so fail within about two minutes at worst
-      # instead of retrying for 11. On failure check_geofabrik.sh prints
-      # diagnostics to tell who is refusing; see that script. rerun-failed.yml
-      # then reruns the job, usually on another runner (it matches this
-      # step's name, so keep the two in sync).
+      # fine. Waiting doesn't help, so the check gives up within about two
+      # minutes at worst instead of retrying for 11. Then check_geofabrik.sh
+      # spends a minute or so on diagnostics to tell who is refusing (see
+      # that script); about 12 if every probe hangs, which the step's
+      # timeout caps. rerun-failed.yml then reruns the job, usually on
+      # another runner (it matches this step's name, so keep the two in
+      # sync).
       - name: Check that Geofabrik is reachable from this runner
+        timeout-minutes: 15
         run: bash check_geofabrik.sh
 
       - uses: actions/setup-python@v5
