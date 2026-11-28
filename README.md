@@ -41,8 +41,9 @@ free straight off this repo's Pages site.
   this workflow): one matrix job per region (download -> pre-filter
   with `osmium tags-filter` -> `build_poi_tiles.py` -> upload as an artifact),
   then one job that downloads every region's artifact, merges them, checks
-  the total size, and deploys to GitHub Pages. Each region job first checks
-  that its runner can reach Geofabrik at all, and fails fast if not.
+  the total size, and deploys to GitHub Pages. Each region job first runs
+  `check_geofabrik.sh`, which fails fast if the runner can't reach Geofabrik
+  at all and prints network diagnostics saying who refused the connection.
 - **`.github/workflows/rerun-failed.yml`** -- when a build on `master` fails
   because a region job couldn't reach Geofabrik, reruns its failed jobs (and
   the deploy after them) up to two more times, since a rerun usually lands
